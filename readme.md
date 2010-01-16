@@ -1,3 +1,19 @@
+What is this
+===============================================
+- Inspired by rsnapshot (http://rsnapshot.org/), this is a php class that does both local and offsite incremental backups using rsync while using hard links to preserve disk space.
+- It's far simpler then rsnapshot to setup and adds mysql backup support as well.
+- A sample backup setup will look something like this. 
+<pre>
+	daily.0
+	daily.1
+	hourly.0
+	hourly.1
+	monthly.0
+	monthly.1
+	weekly.1
+	weekly.1
+</pre>
+
 Requirements
 ===============================================
 1.  rsync, mysql, and mysqldump executables must be installed locally.
