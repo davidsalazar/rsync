@@ -110,31 +110,6 @@ class Rsync
 		if ($this->is_empty_dir("$this->dest/current"))
 			die("<h3Backup failed</h3><p><i>$this->dest/current</i> is an empty dir.</p><h3>Output</h3><p>" . nl2br($this->output) . "</p>";
 		
-		@mkdir("$this->dest/current/$this->mysql_dir");
-
-		if (is_writable("$this->dest/current/$this->mysql_dir") && count($this->mysql_backups))
-		{
-			file_put_contents("$this->dest/current/$this->mysql_dir/.htaccess", 'deny from all');
-			foreach ($this->mysql_backups as $mysql_backup)
-			{
-				if (count($mysql_backup['dbnames']))
-				{
-					$dbnames = $mysql_backup['dbnames'];
-				}
-				else
-				{
-					$dbnames = $this->exec("mysql -h{$mysql_backup['dbhost']} -u{$mysql_backup['dbuser']} -p{$mysql_backup['dbpass']} -e 'show databases' ");
-					$dbnames = @explode("\n", trim($dbnames));
-					array_shift($dbnames);
-				}
-				
-				foreach ($dbnames as $dbname)
-				{
-					$this->exec("mysqldump --opt -h{$mysql_backup['dbhost']} -u{$mysql_backup['dbuser']} -p{$mysql_backup['dbpass']} $dbname > $this->dest/current/$this->mysql_dir/$dbname.sql");
-				}
-			}
-		}
-
 		$this->process();
 		
 		return nl2br($this->output);
@@ -191,6 +166,35 @@ class Rsync
 				{
 					$this->exec("cp $this->cp_switches $this->dest/$prev_interval.$prev_interval_count $this->dest/$interval.0");
 					touch("$this->dest/$interval.0");
+					
+					// Mysql Backups are performed daily to preserve resources
+					if ($interval == 'daily')
+					{
+						@mkdir("$this->dest/$interval.0/$this->mysql_dir");
+
+						if (is_writable("$this->dest/$interval.0/$this->mysql_dir") && count($this->mysql_backups))
+						{
+							file_put_contents("$this->dest/$interval.0/$this->mysql_dir/.htaccess", 'deny from all');
+							foreach ($this->mysql_backups as $mysql_backup)
+							{
+								if (count($mysql_backup['dbnames']))
+								{
+									$dbnames = $mysql_backup['dbnames'];
+								}
+								else
+								{
+									$dbnames = $this->exec("mysql -h{$mysql_backup['dbhost']} -u{$mysql_backup['dbuser']} -p{$mysql_backup['dbpass']} -e 'show databases' ");
+									$dbnames = @explode("\n", trim($dbnames));
+									array_shift($dbnames);
+								}
+
+								foreach ($dbnames as $dbname)
+								{
+									$this->exec("mysqldump --opt -h{$mysql_backup['dbhost']} -u{$mysql_backup['dbuser']} -p{$mysql_backup['dbpass']} $dbname > $this->dest/current/$this->mysql_dir/$dbname.sql");
+								}
+							}
+						}
+					}
 				}
 				
 			}
