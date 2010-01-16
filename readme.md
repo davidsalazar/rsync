@@ -8,12 +8,14 @@ Requirements
 Sample Usage
 ===============================================
 
+<pre>
 // There are only 2 public methods, add_mysql() and init().
 // See Rsync Class for method documentation.
 
 $rsync = new Rsync('user@mydomain.com:/home/user/mydomain.com', '/home/dave/backups');
 $rsync->add_mysql('mysql.mydomain.com', 'db_user', 'db_pass');
 $result = $rsync->init();
+</pre>
 
 Installation
 ===============================================
