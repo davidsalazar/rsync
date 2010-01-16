@@ -108,7 +108,7 @@ class Rsync
 			die("<h3>Backup Failed</h3><p>" . nl2br($this->output) . "</p>");
 
 		if ($this->is_empty_dir("$this->dest/current"))
-			die("<h3Backup failed</h3><p><i>$this->dest/current</i> is an empty dir.</p><h3>Output</h3><p>" . nl2br($this->output) . "</p>";
+			die("<h3Backup failed</h3><p><i>$this->dest/current</i> is an empty dir.</p><h3>Output</h3><p>" . nl2br($this->output) . "</p>");
 		
 		$this->process();
 		
