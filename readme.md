@@ -30,7 +30,7 @@ Sample Usage
 
 $rsync = new Rsync('user@mydomain.com:/home/user/mydomain.com', '/home/dave/backups');
 $rsync->add_mysql('mysql.mydomain.com', 'db_user', 'db_pass');
-$result = $rsync->init();
+echo $result = $rsync->init();
 </pre>
 
 Installation

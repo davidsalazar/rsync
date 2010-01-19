@@ -2,6 +2,10 @@
 
 /*
 	For sample usage and documentation, view readme at http://github.com/davidsalazar/rsync
+	TODO: 
+		Add environment test method to test if directories are writable, ssh and mysql users are valid.
+		Add set_options method to allow configuration of object on the fly.
+		Add intelligent logging.
 */
 	
 class Rsync
