@@ -169,7 +169,7 @@ class Rsync
 
 								foreach ($dbnames as $dbname)
 								{
-									$this->exec("mysqldump --opt -h{$mysql_backup['dbhost']} -u{$mysql_backup['dbuser']} -p{$mysql_backup['dbpass']} $dbname > $this->dest/current/$this->mysql_dir/$dbname.sql");
+									$this->exec("mysqldump --opt -h{$mysql_backup['dbhost']} -u{$mysql_backup['dbuser']} -p{$mysql_backup['dbpass']} $dbname > $this->dest/$interval.0/$this->mysql_dir/$dbname.sql");
 								}
 							}
 						}
