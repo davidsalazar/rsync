@@ -4,7 +4,6 @@
 	For sample usage and documentation, view readme at http://github.com/davidsalazar/rsync
 	TODO: 
 		Add environment test method to test if directories are writable, ssh and mysql users are valid.
-		Add set_options method to allow configuration of object on the fly.
 		Add intelligent logging.
 */
 	
@@ -19,23 +18,24 @@ class Rsync
 	 *
 	 * @var string
 	 */
-	private $exclude_file = 'exclude.txt';
+	public $exclude_file = 'exclude.txt';
 
 	/**
 	 * Mysql backup directory relative to the source path.
 	 *
 	 * @var string
 	 */
-	private $mysql_dir = '_sql';
-	
-	private $hourly = 2;
-	private $daily = 2;
-	private $weekly = 2;
-	private $monthly = 2;
+	public $mysql_dir = '_sql';
+	public $hourly = 2;
+	public $daily = 2;
+	public $weekly = 2;
+	public $monthly = 2;
+
+	public $rsync_bin = 'rsync';
+	public $rsync_switches = '-avz --delete';
+
 	private $source;
 	private $dest;
-	private $rsync_bin = 'rsync';
-	private $rsync_switches = '-avz --delete';
 	private $cp_switches;
 	private $cmd;
 	private $output;
@@ -51,32 +51,35 @@ class Rsync
 	 */
 	public function __construct($source, $dest)
 	{
-		$this->source = rtrim($source, '/');
-		$this->dest = rtrim($dest, '/');
-		$this->mysql_dir = rtrim($this->mysql_dir, '/');
-
 		// OSX is gay and doesn't support hard links via copy using the cp command
 		$this->cp_switches = PHP_OS == 'Darwin' ? '-pPR' : '-al';
 
+		$this->source = rtrim($source, '/');
+		$this->dest = rtrim($dest, '/');
+
 		is_writable($this->dest) or die("Destination directory doesn't exist or isn't writable: $this->dest");
 
-		$this->cmd = "$this->rsync_bin $this->rsync_switches ";
-
-		$base_path = dirname(__FILE__) . '/';
-		if (file_exists($exclude_file = $base_path . $this->exclude_file))
-		{
-			$this->cmd .= "--exclude-from '$exclude_file' ";
-		}
-
-		// If source does not start with a /, we assume it's an ssh url
-		if (strpos($this->source, '/') !== 0)
-		{
-			$this->cmd .= '-e ssh '; 
-		}
-
-		$this->cmd .= "$this->source/ $this->dest/current";
 	}
 	
+	/**
+	 * Any public properties can be configured after object is instantiated.
+	 *
+	 * @param array $options Associate array with index being property name and value being property value.
+	 * @return void
+	 */
+	public function set_options($options = array())
+	{
+		$public_properties = $this->get_public_properties();
+
+		foreach ($options as $k => $v)
+		{
+			if (in_array($k, $public_properties))
+			{
+				$this->$k = $v;
+			}
+		}
+	}
+
 	/**
 	 * Begin backup procedure.
 	 *
@@ -85,6 +88,10 @@ class Rsync
 	public function init()
 	{
 		set_time_limit(60 * $this->time_limit);
+
+		$this->prep();
+
+		$this->cmd .= "$this->source/ $this->dest/current";
 		$rsync_output = $this->exec($this->cmd);
 
 		if (strpos($rsync_output, 'total size is') === FALSE || strpos($rsync_output, 'rsync error') !== FALSE)
@@ -112,6 +119,25 @@ class Rsync
 		$this->mysql_backups[] = array('dbhost' => $dbhost, 'dbuser' => $dbuser, 'dbpass' => $dbpass, 'dbnames' => $dbnames);
 	}
 
+	private function prep()
+	{
+		$this->cmd = "$this->rsync_bin $this->rsync_switches ";
+		$this->mysql_dir = rtrim($this->mysql_dir, '/');
+
+
+		$base_path = dirname(__FILE__) . '/';
+		if (file_exists($exclude_file = $base_path . $this->exclude_file))
+		{
+			$this->cmd .= "--exclude-from '$exclude_file' ";
+		}
+
+		// If source does not start with a /, we assume it's an ssh url
+		if (strpos($this->source, '/') !== 0)
+		{
+			$this->cmd .= '-e ssh '; 
+		}
+	}
+
 	private function process()
 	{	
 		$prev_interval = NULL;
@@ -120,8 +146,8 @@ class Rsync
 		{
 			$prev_interval_count = $prev_interval ? ($this->$prev_interval - 1) : null;
 
-			// If the last increment isn't complete, we will wait until it is.
-			if ($interval != 'hourly' && !is_dir("$this->dest/$prev_interval.$prev_interval_count"))
+			// If there is are no backup jobs for this interval, we skip or the last increment isn't complete, we will wait until it is.
+			if ($this->$interval < 1 || ($interval != 'hourly' && !is_dir("$this->dest/$prev_interval.$prev_interval_count")))
 			{
 				continue;
 			}
@@ -203,6 +229,23 @@ class Rsync
 	private function filemtime($file)
 	{
 		return trim(shell_exec(PHP_OS == 'Darwin' ? "stat -f %m $file" : "stat -c %Y $file"));
+	}
+
+	private function get_public_properties()
+	{
+		$this_object = new ReflectionObject($this);
+		$properties = $this_object->getProperties();
+		
+		$public_properties = array();
+		foreach ($properties as $property)
+		{
+			if ($property->isPublic())
+			{
+				$public_properties[] = $property->getName();
+			}
+		}
+		
+		return $public_properties;
 	}
 }
 

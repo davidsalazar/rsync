@@ -25,7 +25,7 @@ Sample Usage
 ===============================================
 
 <pre>
-// There are only 2 public methods, add_mysql() and init().
+// There are only 3 public methods, add_mysql(), set_options() and init().
 // See Rsync Class for method documentation.
 
 $rsync = new Rsync('user@mydomain.com:/home/user/mydomain.com', '/home/dave/backups');
