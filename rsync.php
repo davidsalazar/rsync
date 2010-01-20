@@ -26,6 +26,8 @@ class Rsync
 	 * @var string
 	 */
 	public $mysql_dir = '_sql';
+	
+	// The following intervals must have a minimum of 1 backup.
 	public $hourly = 2;
 	public $daily = 2;
 	public $weekly = 2;
@@ -144,10 +146,10 @@ class Rsync
 
 		foreach ($this->backups as $interval => $expiration)
 		{
-			$prev_interval_count = $prev_interval ? ($this->$prev_interval - 1) : null;
+			$prev_interval_count = $prev_interval ? ($this->$prev_interval - 1) : NULL;
 
-			// If there is are no backup jobs for this interval, we skip or the last increment isn't complete, we will wait until it is.
-			if ($this->$interval < 1 || ($interval != 'hourly' && !is_dir("$this->dest/$prev_interval.$prev_interval_count")))
+			// If the last increment isn't complete, we will wait until it is.
+			if ($interval != 'hourly' && !is_dir("$this->dest/$prev_interval.$prev_interval_count"))
 			{
 				continue;
 			}
