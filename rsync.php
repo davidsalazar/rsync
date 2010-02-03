@@ -27,6 +27,7 @@ class Rsync
 	 */
 	public $mysql_dir = '_sql';
 	public $mysql_backup_interval = 'daily';
+	public $mysql_gzip = FALSE;
 	
 	// The following intervals must have a minimum of 1 backup.
 	public $hourly = 2;
@@ -214,7 +215,16 @@ class Rsync
 
 					foreach ($dbnames as $dbname)
 					{
-						$this->exec("mysqldump --opt -h{$mysql_backup['dbhost']} -u{$mysql_backup['dbuser']} -p{$mysql_backup['dbpass']} $dbname > $this->dest/$interval.0/$this->mysql_dir/$dbname.sql");
+						$mysqldump = "mysqldump --opt -h{$mysql_backup['dbhost']} -u{$mysql_backup['dbuser']} -p{$mysql_backup['dbpass']} $dbname ";
+						if ($this->mysql_gzip)
+						{
+							$mysqldump .= "| gzip > $this->dest/$interval.0/$this->mysql_dir/$dbname.sql.gz";							
+						}
+						else
+						{
+							$mysqldump .= "> $this->dest/$interval.0/$this->mysql_dir/$dbname.sql";
+						}
+						$this->exec($mysqldump);
 					}
 				}
 			}
