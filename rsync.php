@@ -26,6 +26,7 @@ class Rsync
 	 * @var string
 	 */
 	public $mysql_dir = '_sql';
+	public $mysql_backup_interval = 'daily';
 	
 	// The following intervals must have a minimum of 1 backup.
 	public $hourly = 2;
@@ -177,42 +178,47 @@ class Rsync
 				{
 					$this->exec("cp $this->cp_switches $this->dest/$prev_interval.$prev_interval_count $this->dest/$interval.0");
 					touch("$this->dest/$interval.0");
-					
-					// Mysql Backups are performed daily to preserve resources
-					if ($interval == 'daily')
-					{
-						@mkdir("$this->dest/$interval.0/$this->mysql_dir");
-
-						if (is_writable("$this->dest/$interval.0/$this->mysql_dir") && count($this->mysql_backups))
-						{
-							file_put_contents("$this->dest/$interval.0/$this->mysql_dir/.htaccess", 'deny from all');
-							foreach ($this->mysql_backups as $mysql_backup)
-							{
-								if (count($mysql_backup['dbnames']))
-								{
-									$dbnames = $mysql_backup['dbnames'];
-								}
-								else
-								{
-									$dbnames = $this->exec("mysql -h{$mysql_backup['dbhost']} -u{$mysql_backup['dbuser']} -p{$mysql_backup['dbpass']} -e 'show databases' ");
-									$dbnames = @explode("\n", trim($dbnames));
-									array_shift($dbnames);
-								}
-
-								foreach ($dbnames as $dbname)
-								{
-									$this->exec("mysqldump --opt -h{$mysql_backup['dbhost']} -u{$mysql_backup['dbuser']} -p{$mysql_backup['dbpass']} $dbname > $this->dest/$interval.0/$this->mysql_dir/$dbname.sql");
-								}
-							}
-						}
-					}
 				}
+
+				$this->process_mysql($interval);
+
 				
 			}
 
 			$prev_interval = $interval;
 		}
 		
+	}
+
+	private function process_mysql($interval)
+	{
+		if ($this->mysql_backup_interval == $interval)
+		{
+			@mkdir("$this->dest/$interval.0/$this->mysql_dir");
+
+			if (is_writable("$this->dest/$interval.0/$this->mysql_dir") && count($this->mysql_backups))
+			{
+				file_put_contents("$this->dest/$interval.0/$this->mysql_dir/.htaccess", 'deny from all');
+				foreach ($this->mysql_backups as $mysql_backup)
+				{
+					if (count($mysql_backup['dbnames']))
+					{
+						$dbnames = $mysql_backup['dbnames'];
+					}
+					else
+					{
+						$dbnames = $this->exec("mysql -h{$mysql_backup['dbhost']} -u{$mysql_backup['dbuser']} -p{$mysql_backup['dbpass']} -e 'show databases' ");
+						$dbnames = @explode("\n", trim($dbnames));
+						array_shift($dbnames);
+					}
+
+					foreach ($dbnames as $dbname)
+					{
+						$this->exec("mysqldump --opt -h{$mysql_backup['dbhost']} -u{$mysql_backup['dbuser']} -p{$mysql_backup['dbpass']} $dbname > $this->dest/$interval.0/$this->mysql_dir/$dbname.sql");
+					}
+				}
+			}
+		}
 	}
 
 	private function is_empty_dir($dir)
