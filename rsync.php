@@ -181,9 +181,11 @@ class Rsync
 					touch("$this->dest/$interval.0");
 				}
 
-				$this->process_mysql($interval);
+				if (count($this->mysql_backups) && $this->mysql_backup_interval == $interval)
+				{
+					$this->process_mysql($interval);					
+				}
 
-				
 			}
 
 			$prev_interval = $interval;
@@ -193,39 +195,36 @@ class Rsync
 
 	private function process_mysql($interval)
 	{
-		if ($this->mysql_backup_interval == $interval)
-		{
-			@mkdir("$this->dest/$interval.0/$this->mysql_dir");
+		@mkdir("$this->dest/$interval.0/$this->mysql_dir");
 
-			if (is_writable("$this->dest/$interval.0/$this->mysql_dir") && count($this->mysql_backups))
+		if (is_writable("$this->dest/$interval.0/$this->mysql_dir") && count($this->mysql_backups))
+		{
+			file_put_contents("$this->dest/$interval.0/$this->mysql_dir/.htaccess", 'deny from all');
+			foreach ($this->mysql_backups as $mysql_backup)
 			{
-				file_put_contents("$this->dest/$interval.0/$this->mysql_dir/.htaccess", 'deny from all');
-				foreach ($this->mysql_backups as $mysql_backup)
+				if (count($mysql_backup['dbnames']))
 				{
-					if (count($mysql_backup['dbnames']))
+					$dbnames = $mysql_backup['dbnames'];
+				}
+				else
+				{
+					$dbnames = $this->exec("mysql -h{$mysql_backup['dbhost']} -u{$mysql_backup['dbuser']} -p{$mysql_backup['dbpass']} -e 'show databases' ");
+					$dbnames = @explode("\n", trim($dbnames));
+					array_shift($dbnames);
+				}
+
+				foreach ($dbnames as $dbname)
+				{
+					$mysqldump = "mysqldump --opt -h{$mysql_backup['dbhost']} -u{$mysql_backup['dbuser']} -p{$mysql_backup['dbpass']} $dbname ";
+					if ($this->mysql_gzip)
 					{
-						$dbnames = $mysql_backup['dbnames'];
+						$mysqldump .= "| gzip > $this->dest/$interval.0/$this->mysql_dir/$dbname.sql.gz";							
 					}
 					else
 					{
-						$dbnames = $this->exec("mysql -h{$mysql_backup['dbhost']} -u{$mysql_backup['dbuser']} -p{$mysql_backup['dbpass']} -e 'show databases' ");
-						$dbnames = @explode("\n", trim($dbnames));
-						array_shift($dbnames);
+						$mysqldump .= "> $this->dest/$interval.0/$this->mysql_dir/$dbname.sql";
 					}
-
-					foreach ($dbnames as $dbname)
-					{
-						$mysqldump = "mysqldump --opt -h{$mysql_backup['dbhost']} -u{$mysql_backup['dbuser']} -p{$mysql_backup['dbpass']} $dbname ";
-						if ($this->mysql_gzip)
-						{
-							$mysqldump .= "| gzip > $this->dest/$interval.0/$this->mysql_dir/$dbname.sql.gz";							
-						}
-						else
-						{
-							$mysqldump .= "> $this->dest/$interval.0/$this->mysql_dir/$dbname.sql";
-						}
-						$this->exec($mysqldump);
-					}
+					$this->exec($mysqldump);
 				}
 			}
 		}
